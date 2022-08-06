@@ -2,7 +2,7 @@
 
 Simple Real Time Car Detection app using feed from Youtube livestream to count vehicles.
 
-![RTcar](https://github.com/Kropekkk/Real-Time-Car-Detection/RTcar.gif)
+![RTcar](https://github.com/Kropekkk/Real-Time-Car-Detection/blob/main/RTcar.gif)
 
 ## Dependencies
 This project uses custom trained [MobileNet-SSD model](https://github.com/tensorflow/models/blob/master/research/object_detection/configs/tf2/ssd_mobilenet_v2_320x320_coco17_tpu-8.config) (to collect data run ```collect.py``` )
@@ -23,4 +23,4 @@ This project uses custom trained [MobileNet-SSD model](https://github.com/tensor
 
 I tested my custom trained model using NVIDIA GeForce GTX 1070, CUDA 11.2.0. The results are given below
 
-![Results](https://github.com/Kropekkk/Real-Time-Car-Detection/fpsResults.png)
+![Results](https://github.com/Kropekkk/Real-Time-Car-Detection/blob/main/fpsResults.png)
