@@ -1,3 +1,4 @@
+from sre_parse import State
 from vidgear.gears import CamGear
 import cv2
 import os
@@ -5,9 +6,9 @@ import uuid
 
 options = {"STREAM_RESOLUTION": "720p"}
 
-stream = CamGear(source='https://www.youtube.com/watch?v=1EiC9bvVGnk', stream_mode = True, logging=True, **options).start()
+stream = CamGear(source='https://www.youtube.com/watch?v=LOUpPQ-iJIo', stream_mode = True, logging=True, **options).start()
 
-IMAGES_PATH = os.path.join('./data/images/new')
+IMAGES_PATH = os.path.join('./data/images/pol/1')
 
 imagesCaptured = 0
 
@@ -28,6 +29,7 @@ while True:
 
     if key == ord("q"):
         break
+
 
 cv2.destroyAllWindows()
 stream.stop()

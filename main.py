@@ -11,13 +11,13 @@ from matplotlib import pyplot as plt
 import time
 from vidgear.gears import CamGear
 
-options = {"STREAM_RESOLUTION": "480p"}
+options = {"STREAM_RESOLUTION": "720p"}
 
 LABEL_MAP = os.path.join('CAR_DETECTION_GRAPH', 'label_map.pbtxt')
 CONFIG = os.path.join('CAR_DETECTION_GRAPH', 'pipeline.config')
 CHECKPOINT = os.path.join('CAR_DETECTION_GRAPH', 'checkpoint',  'ckpt-0')
 
-stream = CamGear(source='https://www.youtube.com/watch?v=1EiC9bvVGnk', stream_mode = True, logging=True, **options).start()
+stream = CamGear(source='https://www.youtube.com/watch?v=LOUpPQ-iJIo', stream_mode = True, logging=True, **options).start()
 
 category_index = label_map_util.create_category_index_from_labelmap(LABEL_MAP)
 configs = config_util.get_configs_from_pipeline_file(CONFIG)
@@ -25,6 +25,23 @@ detection_model = model_builder.build(model_config=configs['model'], is_training
 
 ckpt = tf.compat.v2.train.Checkpoint(model=detection_model)
 ckpt.restore(os.path.join(CHECKPOINT)).expect_partial()
+
+def CorToPoint(a,b,c,d):
+    x= (b+a)/2
+    y= (c+d)/2
+    return x,y
+
+def checkLine(a,b,c,d):
+    global count
+    x, y = CorToPoint(a,b,c,d)
+
+    if x> x1[0] and x< x2[0]:
+        if y> x1[1] and y<x2[1]:
+            count+=1
+            print("Car Detected")
+
+
+
 
 def detect_fn(image):
     image, shapes = detection_model.preprocess(image)
@@ -58,9 +75,35 @@ def detect_models(image):
                 max_boxes_to_draw=15,
                 min_score_thresh=.75,
                 agnostic_mode=False)
+
+    boxes = detections['detection_boxes']
+    # get all boxes from an array
+    max_boxes_to_draw = boxes.shape[0]
+    # get scores to get a threshold
+    scores = detections['detection_scores']
+    # this is set as a default but feel free to adjust it to your needs
+    min_score_thresh=.5
+    # iterate over all objects found
+    for i in range(min(max_boxes_to_draw, boxes.shape[0])):
+        # 
+        if scores is None or scores[i] > min_score_thresh:
+            a,b,c,d = boxes[i]
+
+            h,w = image.shape[:2]
+
+            x,y,z,m = (a*h,b*w,c*h,d*w) #ymin xmin ymax xmax
+            checkLine(y,m,x,z)
+
+
     return image_np_with_detections
 
 skip_frame =0
+
+x1,x2 = (490, 525), (675,580)
+color = (0,255,0)
+thickness = 8
+
+count = 0
 
 while True: 
     start_time = time.time()
@@ -71,18 +114,24 @@ while True:
     if frame is None:
         break
 
+
     img = frame
     height = img.shape[0]
     width = img.shape[1]
     img_cropped = img[20:height,0:width]
 
-    if skip_frame<5:
+    if skip_frame<6:
         continue
 
     skip_frame=0
 
-    cv2.imshow('car detection',  detect_models(img))
-    cv2.imshow('test', img)
+    rimg = detect_models(img)
+    display = cv2.line(rimg,x1,x2,color,thickness)
+    display = cv2.putText(display, "Cars: " + str(count), (50,50),cv2.FONT_HERSHEY_SIMPLEX,1, (0,255,0),2
+    
+    )
+
+    cv2.imshow('car detection', display )
 
     print("FPS: ", 1.0 / (time.time() - start_time))
     cv2.waitKey(1)
