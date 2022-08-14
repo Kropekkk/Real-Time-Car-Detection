@@ -10,14 +10,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 import time
 from vidgear.gears import CamGear
+import sys
+
+url = sys.argv[1]
 
 options = {"STREAM_RESOLUTION": "720p"}
+stream = CamGear(source=url, stream_mode = True, logging=True, **options).start()
 
 LABEL_MAP = os.path.join('CAR_DETECTION_GRAPH', 'label_map.pbtxt')
 CONFIG = os.path.join('CAR_DETECTION_GRAPH', 'pipeline.config')
 CHECKPOINT = os.path.join('CAR_DETECTION_GRAPH', 'checkpoint',  'ckpt-0')
-
-stream = CamGear(source='https://www.youtube.com/watch?v=LOUpPQ-iJIo', stream_mode = True, logging=True, **options).start()
 
 category_index = label_map_util.create_category_index_from_labelmap(LABEL_MAP)
 configs = config_util.get_configs_from_pipeline_file(CONFIG)
@@ -26,22 +28,19 @@ detection_model = model_builder.build(model_config=configs['model'], is_training
 ckpt = tf.compat.v2.train.Checkpoint(model=detection_model)
 ckpt.restore(os.path.join(CHECKPOINT)).expect_partial()
 
-def CorToPoint(a,b,c,d):
+def get_center_point(a,b,c,d):
     x= (b+a)/2
     y= (c+d)/2
     return x,y
 
-def checkLine(a,b,c,d):
+def check_line(a,b,c,d):
     global count
-    x, y = CorToPoint(a,b,c,d)
+    x, y = get_center_point(a,b,c,d)
 
     if x> x1[0] and x< x2[0]:
         if y> x1[1] and y<x2[1]:
             count+=1
             print("Car Detected")
-
-
-
 
 def detect_fn(image):
     image, shapes = detection_model.preprocess(image)
@@ -51,15 +50,13 @@ def detect_fn(image):
 
 def detect_models(image):
     image_np = np.array(image)
-    
     input_tensor = tf.convert_to_tensor(np.expand_dims(image_np, 0), dtype=tf.float32)
     detections = detect_fn(input_tensor)
-    
+
     num_detections = int(detections.pop('num_detections'))
     detections = {key: value[0, :num_detections].numpy()
                   for key, value in detections.items()}
     detections['num_detections'] = num_detections
-
     detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
 
     label_id_offset = 1
@@ -77,23 +74,15 @@ def detect_models(image):
                 agnostic_mode=False)
 
     boxes = detections['detection_boxes']
-    # get all boxes from an array
     max_boxes_to_draw = boxes.shape[0]
-    # get scores to get a threshold
     scores = detections['detection_scores']
-    # this is set as a default but feel free to adjust it to your needs
     min_score_thresh=.5
-    # iterate over all objects found
     for i in range(min(max_boxes_to_draw, boxes.shape[0])):
-        # 
         if scores is None or scores[i] > min_score_thresh:
             a,b,c,d = boxes[i]
-
             h,w = image.shape[:2]
-
-            x,y,z,m = (a*h,b*w,c*h,d*w) #ymin xmin ymax xmax
-            checkLine(y,m,x,z)
-
+            x,y,z,m = (a*h,b*w,c*h,d*w)
+            check_line(y,m,x,z)
 
     return image_np_with_detections
 
@@ -104,6 +93,7 @@ color = (0,255,0)
 thickness = 8
 
 count = 0
+data=[]
 
 while True: 
     start_time = time.time()
@@ -113,7 +103,6 @@ while True:
 
     if frame is None:
         break
-
 
     img = frame
     height = img.shape[0]
@@ -127,15 +116,13 @@ while True:
 
     rimg = detect_models(img)
     display = cv2.line(rimg,x1,x2,color,thickness)
-    display = cv2.putText(display, "Cars: " + str(count), (50,50),cv2.FONT_HERSHEY_SIMPLEX,1, (0,255,0),2
-    
-    )
-
+    display = cv2.putText(display, "Cars: " + str(count), (50,50),cv2.FONT_HERSHEY_SIMPLEX,1, color,2  )
     cv2.imshow('car detection', display )
 
-    print("FPS: ", 1.0 / (time.time() - start_time))
+    #fps = 1.0 / (time.time() - start_time)
+    #print("FPS: ", str(fps))
     cv2.waitKey(1)
     
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    if cv2.waitKey(10) & 0xFF == ord('q'):      
         cv2.destroyAllWindows()
         break
